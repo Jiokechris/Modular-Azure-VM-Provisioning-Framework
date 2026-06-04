@@ -366,10 +366,100 @@ git push origin feature-name
 * [ ] Infrastructure Testing
 
 ---
+## Azure Key Vault Integration
+
+### Overview
+
+To improve security and eliminate hardcoded secrets, this project integrates Azure Key Vault for centralized secret management.
+
+The Key Vault module is responsible for:
+
+* Creating an Azure Key Vault
+* Storing secrets securely
+* Retrieving secrets when required
+* Supporting future enhancements such as Managed Identity and automated secret injection
+
+### Configuration
+
+Add the following variables to your local `config.env` file:
+
+```bash
+KV_NAME=<your-key-vault-name>
+SECRET_NAME=vm-admin-password
+```
+
+> Note: `config.env` is excluded from source control and should not be committed to GitHub.
+
+### Module Structure
+
+```text
+modules/
+├── keyvault.sh
+```
+
+### Key Vault Workflow
+
+The deployment pipeline performs the following steps:
+
+1. Validate Azure CLI installation
+2. Verify Azure authentication
+3. Create SSH keys
+4. Create Resource Group
+5. Create Azure Key Vault
+6. Store deployment secret in Key Vault
+7. Create Virtual Machine
+8. Configure networking
+9. Verify deployment
+10. Display deployment summary
+11. Cleanup temporary resources
+
+### Key Vault Commands
+
+#### Create Key Vault
+
+```bash
+az keyvault create \
+  --name <key-vault-name> \
+  --resource-group <resource-group> \
+  --location <location> \
+  --enable-rbac-authorization true
+```
+
+#### Store a Secret
+
+```bash
+az keyvault secret set \
+  --vault-name <key-vault-name> \
+  --name vm-admin-password \
+  --value "<secret-value>"
+```
+
+#### Retrieve a Secret
+
+```bash
+az keyvault secret show \
+  --vault-name <key-vault-name> \
+  --name vm-admin-password \
+  --query value -o tsv
+```
+
+### Security Benefits
+
+* Removes hardcoded credentials from scripts
+* Centralizes secret management
+* Supports Azure RBAC authorization
+* Prepares the project for CI/CD integration
+* Aligns with Azure security best practices
+
+### Future Enhancements
+
+* Azure Managed Identity integration
+* Automatic secret retrieval during VM provisioning
+* GitHub Actions deployment pipeline
+* Multi-environment support (Development, Test, Production)
 
 ## Future Improvements
 
-* Azure Key Vault integration
 * Secure credential management
 * Terraform migration
 * Multi-environment deployments
