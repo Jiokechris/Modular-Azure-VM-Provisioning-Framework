@@ -64,8 +64,8 @@ This modular design improves:
 azure-vm-project/
 │
 ├── deploy.sh
-├── .env
-├── .yaml
+├── config.env
+├── cloud-init.yaml
 ├── README.md
 │
 ├── logs/
