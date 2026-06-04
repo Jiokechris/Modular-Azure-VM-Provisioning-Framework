@@ -1,0 +1,94 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - nginx
+
+write_files:
+  - path: /var/www/html/index.html
+    content: |
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>GS Building 101</title>
+        <style>
+          body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+          }
+
+          .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 50px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 70%;
+            max-width: 700px;
+          }
+
+          h1 {
+            font-size: 40px;
+            color: #38bdf8;
+            margin-bottom: 10px;
+          }
+
+          p {
+            font-size: 18px;
+            color: #cbd5e1;
+            line-height: 1.6;
+          }
+
+          .btn {
+            margin-top: 20px;
+            display: inline-block;
+            padding: 12px 25px;
+            background: #38bdf8;
+            color: #0f172a;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+          }
+
+          .btn:hover {
+            background: #0ea5e9;
+          }
+
+          footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="container">
+          <h1>Welcome to GS Building 10 </h1>
+          <p>
+            A modern cloud-hosted environment powered by Azure Infrastructure.<br>
+            Designed for scalable deployment, automation, and DevOps learning.
+          </p>
+
+          <a class="btn" href="#">Get Started</a>
+
+          <footer>
+            (c) 2026 GS Tech - Built with Azure Cloud Automation
+          </footer>
+        </div>
+      </body>
+      </html>
+
+runcmd:
+  - systemctl enable nginx
+  - systemctl restart nginx
