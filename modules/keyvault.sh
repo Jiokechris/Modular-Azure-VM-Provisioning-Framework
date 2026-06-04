@@ -3,9 +3,12 @@
 create_key_vault() {
   az keyvault create \
     --name "$KV_NAME" \
-    --resource-group "$RG_NAME" \
-    --location "$LOCATION" \
-    --enable-rbac-authorization true
+    --resource-group "$RG" \
+    --location "$LOCATION"
+
+  az keyvault set-policy \
+    --name "$KV_NAME" \
+    --secret-permissions get list set delete
 }
 
 store_secret() {
