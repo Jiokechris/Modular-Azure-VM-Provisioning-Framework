@@ -366,7 +366,7 @@ git push origin feature-name
 * [ ] Infrastructure Testing
 
 ---
-## Azure Key Vault Integration
+## Azure Key Vault Integration (version 2)
 
 ### Overview
 
@@ -451,10 +451,540 @@ az keyvault secret show \
 * Prepares the project for CI/CD integration
 * Aligns with Azure security best practices
 
+# Version 3 – 
+ Azure Managed Identity integration / Automatic secret retrieval during VM provisioning
+
+## Overview
+
+This version upgrades the Azure VM Provisioning Framework by introducing secure secret management through Azure Key Vault and enabling Managed Identity on deployed Virtual Machines.
+
+The objective of this enhancement is to eliminate local secret dependency, improve security posture, and move the project closer to real-world enterprise deployment practices.
+
+---
+
+# New Features Added
+
+## 1. Azure Key Vault Integration
+
+Azure Key Vault is now automatically provisioned during deployment.
+
+### Functionality
+
+- Creates a dedicated Key Vault for each deployment
+- Enables Azure RBAC authorization
+- Assigns Key Vault Secrets Officer role to the deployment user
+- Waits for RBAC propagation before continuing
+- Verifies successful Key Vault creation before proceeding
+
+### Deployment Flow
+
+```text
+Create Resource Group
+        ↓
+Create Key Vault
+        ↓
+Assign RBAC Role
+        ↓
+Wait for Propagation
+        ↓
+Continue Deployment
+```
+
+---
+
+## 2. SSH Private Key Storage
+
+The framework now stores the generated SSH private key inside Azure Key Vault.
+
+### Benefits
+
+- Prevents dependency on local storage
+- Enables future key retrieval
+- Provides centralized secret management
+- Aligns with enterprise security practices
+
+### Secret Stored
+
+```text
+Secret Name:
+ssh-private-key
+```
+
+### Workflow
+
+```text
+Generate SSH Keys
+        ↓
+Create Key Vault
+        ↓
+Store Private Key
+        ↓
+Deploy VM
+```
+
+---
+
+## 3. Managed Identity Enabled
+
+Virtual Machines are now deployed with a System Assigned Managed Identity.
+
+### Benefits
+
+- Removes the need for credentials inside the VM
+- Enables secure access to Azure services
+- Supports future Key Vault secret retrieval
+- Enterprise-ready authentication mechanism
+
+### Azure CLI Parameter Used
+
+```bash
+--assign-identity
+```
+
+---
+
+## 4. Automated RBAC Configuration
+
+RBAC assignments are now automated during deployment.
+
+### Current User
+
+Role Assigned:
+
+```text
+Key Vault Secrets Officer
+```
+
+Purpose:
+
+- Store secrets in Key Vault
+- Manage Key Vault secrets
+
+### VM Identity
+
+Managed Identity is automatically created during VM deployment.
+
+Principal ID retrieval:
+
+```bash
+az vm show \
+  --resource-group <resource-group> \
+  --name <vm-name> \
+  --query identity.principalId
+```
+
+---
+
+# Updated Deployment Workflow
+
+```text
+Check Azure CLI
+        ↓
+Verify Azure Login
+        ↓
+Set Subscription Context
+        ↓
+Generate SSH Keys
+        ↓
+Create Resource Group
+        ↓
+Create Key Vault
+        ↓
+Assign Key Vault RBAC
+        ↓
+Store SSH Private Key
+        ↓
+Create VM
+        ↓
+Enable Managed Identity
+        ↓
+Assign RBAC
+        ↓
+Open HTTP Port
+        ↓
+Get Public IP
+        ↓
+Verify Nginx Deployment
+        ↓
+Display Summary
+```
+
+---
+
+# Challenges Encountered During Implementation
+
+This phase involved extensive troubleshooting and debugging.
+
+---
+
+## Challenge 1 – Missing Subscription Error
+
+### Error
+
+```text
+(MissingSubscription)
+The request did not have a subscription or a valid tenant level resource provider.
+```
+
+### Cause
+
+Azure CLI context was not consistently available during role assignment operations.
+
+### Resolution
+
+Explicit subscription selection was added.
+
+```bash
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+az account set \
+  --subscription "$SUBSCRIPTION_ID"
+```
+
+---
+
+## Challenge 2 – Key Vault Scope Resolution Failure
+
+### Error
+
+```text
+ERROR: Could not resolve Key Vault scope
+```
+
+### Cause
+
+Role assignment attempted before Key Vault provisioning was fully completed.
+
+### Resolution
+
+Added verification loop.
+
+```bash
+az keyvault show \
+  --name "$KV_NAME" \
+  --resource-group "$RG"
+```
+
+Deployment now waits until the Key Vault becomes available.
+
+---
+
+## Challenge 3 – Function Not Found
+
+### Error
+
+```text
+store_ssh_private_key:
+command not found
+```
+
+### Cause
+
+Function was referenced in deploy.sh but had not been implemented.
+
+### Resolution
+
+Created:
+
+```bash
+store_ssh_private_key()
+```
+
+inside:
+
+```text
+modules/keyvault.sh
+```
+
+---
+
+## Challenge 4 – SSH Private Key Not Found
+
+### Error
+
+```text
+No such file or directory
+```
+
+### Cause
+
+SSH path referenced:
+
+```text
+~/.ssh/
+```
+
+while keys actually existed in:
+
+```text
+Downloads/saved-keys
+```
+
+### Resolution
+
+Updated configuration.
+
+```bash
+KEY_DIR="/c/Users/HomePC/Downloads/saved-keys"
+
+SSH_PATH="$KEY_DIR/id_rsa_prod"
+```
+
+---
+
+## Challenge 5 – Windows Path vs Git Bash Path
+
+### Error
+
+Azure CLI could not locate key files.
+
+### Cause
+
+Windows path formats conflicted with Git Bash path formats.
+
+Examples:
+
+```text
+C:\Users\HomePC\Downloads\saved-keys
+```
+
+vs
+
+```text
+/c/Users/HomePC/Downloads/saved-keys
+```
+
+### Resolution
+
+Path conversion added.
+
+```bash
+WINDOWS_SSH_PATH=$(cygpath -w "$SSH_PATH")
+```
+
+---
+
+## Challenge 6 – Public Key Variable Empty
+
+### Error
+
+```text
+DEBUG SSH_PUBLIC_KEY=
+```
+
+### Cause
+
+Variable was missing from runtime context.
+
+### Resolution
+
+Generated dynamically.
+
+```bash
+SSH_PUBLIC_KEY="${SSH_PATH}.pub"
+```
+
+---
+
+## Challenge 7 – VM Creation Failed
+
+### Error
+
+```text
+An RSA key file or key value
+must be supplied to SSH Key Value
+```
+
+### Cause
+
+Azure CLI was not receiving the public key correctly.
+
+### Resolution
+
+Validated:
+
+```bash
+if [ ! -f "$SSH_PUBLIC_KEY" ]
+```
+
+before deployment.
+
+---
+
+## Challenge 8 – Managed Identity Contributor Warning
+
+### Message
+
+```text
+No access was given yet to the VM
+because '--scope' was not provided.
+```
+
+### Cause
+
+Azure automatically warns when a Managed Identity is created without role assignments.
+
+### Resolution
+
+Identified as informational.
+
+The VM deploys successfully.
+
+Future enhancement can automatically assign:
+
+```text
+Contributor
+```
+
+or
+
+```text
+Key Vault Secrets User
+```
+
+roles to the VM identity.
+
+---
+
+# Sample Deployment Output
+
+```text
+Resource Group Created.
+Key Vault Created.
+RBAC Assignment Completed.
+SSH Private Key Stored.
+VM Created Successfully.
+Managed Identity Enabled.
+Public IP Retrieved.
+Website Verified Successfully.
+Deployment Complete.
+```
+
+---
+
+# Project Structure After Enhancement
+
+```text
+project-root
+│
+├── deploy.sh
+├── config-prod.env
+│
+├── modules
+│   ├── prerequisites.sh
+│   ├── ssh.sh
+│   ├── resourcegroup.sh
+│   ├── network.sh
+│   ├── keyvault.sh
+│   ├── vm.sh
+│   ├── rbac.sh
+│   ├── verification.sh
+│   ├── summary.sh
+│   └── cleanup.sh
+│
+└── cloud-init.yaml
+```
+
+---
+
+# Screenshots Section
+
+
+## Screenshot 1 – Resource Group Creation
+
+"C:\Users\HomePC\Downloads\resource-group-created.png"
+
+
+docs/images/resource-group-created.png
+```
+
+---
+
+## Screenshot 2 – Key Vault Deployment
+
+"C:\Users\HomePC\Downloads\Key Vault Deployment.png"
+
+
+docs/images/keyvault-created.png
+```
+
+## Screenshot 3 – Key Vault Secret Storage
+
+"C:\Users\HomePC\Downloads\Key Vault Secret Storage.png"
+
+docs/images/keyvault-secret.png
+```
+
+
+
+## Screenshot 4 – VM Deployment Success
+
+"C:\Users\HomePC\Downloads\VM Deployment Success.png"
+---
+
+## Screenshot 5 – Managed Identity Enabled
+
+
+"C:\Users\HomePC\Downloads\Managed Identity Enabled.png"
+
+docs/images/managed-identity.png
+```
+
+## Screenshot 6 – Nginx Verification
+
+"C:\Users\HomePC\Downloads\Nginx Verification.png"
+
+docs/images/nginx-verification.png
+```
+
+---
+
+# Skills Demonstrated
+
+- Azure Resource Groups
+- Azure Virtual Machines
+- Azure Key Vault
+- Azure RBAC
+- Azure Managed Identity
+- Azure CLI
+- Bash Scripting
+- Infrastructure Automation
+- Secret Management
+- Linux Administration
+- Cloud Security Fundamentals
+- Troubleshooting & Debugging
+- Modular Script Architecture
+
+---
+
+# Version Summary
+
+### Version 1
+
+- Automated Azure VM Deployment
+- Resource Group Creation
+- SSH Authentication
+- Nginx Installation
+- Modular Bash Architecture
+
+### Version 2
+
+- Azure Key Vault Integration
+
+### Version 3
+
+- SSH Private Key Storage
+- RBAC Automation
+- Managed Identity Enablement
+- Subscription Context Handling
+- Enhanced Validation & Error Handling
+- Enterprise Security Improvements
+
+---
+
+
 ### Future Enhancements
 
-* Azure Managed Identity integration
-* Automatic secret retrieval during VM provisioning
 * GitHub Actions deployment pipeline
 * Multi-environment support (Development, Test, Production)
 
