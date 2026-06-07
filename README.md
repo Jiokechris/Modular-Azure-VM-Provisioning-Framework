@@ -892,51 +892,36 @@ project-root
 
 ## Screenshot 1 – Resource Group Creation
 
-"C:\Users\HomePC\Downloads\resource-group-created.png"
-
-
-docs/images/resource-group-created.png
-```
+![Resource Group Created](docs/images/resource-group-created.png)
 
 ---
 
 ## Screenshot 2 – Key Vault Deployment
 
-"C:\Users\HomePC\Downloads\Key Vault Deployment.png"
+![Key Vault Deployment](docs/images/keyvault-created.png)
 
-
-docs/images/keyvault-created.png
-```
 
 ## Screenshot 3 – Key Vault Secret Storage
 
-"C:\Users\HomePC\Downloads\Key Vault Secret Storage.png"
+![Key Vault Secret](docs/images/keyvault-secret.png)
 
-docs/images/keyvault-secret.png
 ```
-
-
 
 ## Screenshot 4 – VM Deployment Success
 
-"C:\Users\HomePC\Downloads\VM Deployment Success.png"
----
+![VM Deployment](docs/images/vm-created.png)
+
 
 ## Screenshot 5 – Managed Identity Enabled
 
 
-"C:\Users\HomePC\Downloads\Managed Identity Enabled.png"
+![Managed Identity](docs/images/managed-identity.png)
 
-docs/images/managed-identity.png
 ```
 
 ## Screenshot 6 – Nginx Verification
 
-"C:\Users\HomePC\Downloads\Nginx Verification.png"
-
-docs/images/nginx-verification.png
-```
-
+![Nginx Verification](docs/images/nginx-verification.png)
 ---
 
 # Skills Demonstrated
