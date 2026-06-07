@@ -1,9 +1,12 @@
 create_resource_group() {
 
+    echo "DEBUG RG VALUE = $RG"
+
     echo "Checking Resource Group..."
 
-    if az group exists --name "$RG" | grep -q true
-    then
+    EXISTS=$(az group exists --name "$RG" --output tsv)
+
+    if [ "$EXISTS" = "true" ]; then
 
         echo "Resource Group already exists."
 

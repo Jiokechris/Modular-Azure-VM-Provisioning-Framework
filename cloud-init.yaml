@@ -5,16 +5,16 @@ package_upgrade: true
 
 packages:
   - nginx
+  - curl
+  - azure-cli
 
 write_files:
   - path: /var/www/html/index.html
     content: |
       <!DOCTYPE html>
       <html lang="en">
+
       <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>GS Building 101</title>
         <style>
           body {
             margin: 0;
@@ -74,7 +74,7 @@ write_files:
 
       <body>
         <div class="container">
-          <h1>Welcome to GS Building 10 </h1>
+          <h1>Welcome to GS Building 10</h1>
           <p>
             A modern cloud-hosted environment powered by Azure Infrastructure.<br>
             Designed for scalable deployment, automation, and DevOps learning.
@@ -90,5 +90,23 @@ write_files:
       </html>
 
 runcmd:
+  # --------------------------
+  # Enable nginx
+  # --------------------------
   - systemctl enable nginx
   - systemctl restart nginx
+
+  # --------------------------
+  # AZURE IDENTITY LAYER (NEW)
+  # --------------------------
+  - az login --identity
+
+  # --------------------------
+  # FETCH KEY VAULT SECRET (NEW)
+  # --------------------------
+  - SECRET=$(az keyvault secret show \
+      --vault-name jiokekv2025v3 \
+      --name vm-admin-password \
+      --query value -o tsv)
+
+  - echo "Secret retrieved successfully" > /tmp/vault_status.txt
