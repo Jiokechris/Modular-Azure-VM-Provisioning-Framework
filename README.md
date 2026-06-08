@@ -905,8 +905,6 @@ project-root
 
 ![Key Vault Secret](docs/images/keyvault-secret.png)
 
-```
-
 ## Screenshot 4 – VM Deployment Success
 
 ![VM Deployment](docs/images/vm-created.png)
@@ -914,10 +912,8 @@ project-root
 
 ## Screenshot 5 – Managed Identity Enabled
 
-
 ![Managed Identity](docs/images/managed-identity.png)
 
-```
 
 ## Screenshot 6 – Nginx Verification
 
