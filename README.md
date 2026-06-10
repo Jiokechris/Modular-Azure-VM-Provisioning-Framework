@@ -920,6 +920,192 @@ project-root
 ![Nginx Verification](docs/images/nginx-verification.png)
 ---
 
+# Version 3.2 – Context Management & VM Provisioning Improvements
+
+## Overview
+
+This release introduces centralized deployment context management and improves the Virtual Machine provisioning workflow.
+
+The primary objective was to establish a single source of truth for deployment variables, eliminate configuration inconsistencies across modules, and improve the reliability of Managed Identity-based deployments.
+
+---
+
+## Features Added
+
+### Centralized Context Management (`context.sh`)
+
+A dedicated `context.sh` file was introduced to centralize deployment variables and resource naming.
+
+#### Responsibilities
+
+* Load deployment configuration.
+* Generate deployment-specific resource names.
+* Export variables for all modules.
+* Standardize deployment context across the framework.
+
+#### Managed Variables
+
+```bash
+RUN_ID
+RG
+VM_NAME
+KV_NAME
+LOCATION
+SSH_PATH
+SSH_PUBLIC_KEY
+CLOUD_INIT_FILE
+```
+
+#### Benefits
+
+* Single source of truth.
+* Consistent resource naming.
+* Reduced configuration duplication.
+* Simplified troubleshooting.
+* Improved maintainability.
+
+---
+
+### Dynamic Resource Naming
+
+Resources are automatically generated using a deployment timestamp.
+
+#### Example
+
+```text
+RUN_ID=20260608231304
+
+Resource Group:
+rg-prod-20260608231304
+
+Virtual Machine:
+jioke-prod-vm-20260608231304
+
+Key Vault:
+jkv-20260608231304
+```
+
+#### Benefits
+
+* Prevents naming conflicts.
+* Supports repeated deployments.
+* Simplifies environment isolation.
+* Improves resource traceability.
+
+---
+
+### VM Provisioning Improvements
+
+The VM deployment workflow was enhanced with additional validation and identity handling.
+
+#### Enhancements
+
+* SSH public key validation before deployment.
+* Deployment debug logging.
+* Managed Identity assignment during VM creation.
+* Managed Identity readiness verification.
+* Improved deployment visibility.
+
+#### SSH Key Validation
+
+```bash
+if [ ! -f "$SSH_PUBLIC_KEY" ]; then
+    echo "ERROR: SSH public key not found"
+    return 1
+fi
+```
+
+#### Benefits
+
+* Prevents failed VM deployments.
+* Reduces troubleshooting time.
+* Improves deployment reliability.
+
+---
+
+### Managed Identity Verification
+
+After VM creation, the deployment now verifies that the System Assigned Managed Identity has been provisioned successfully before continuing to RBAC configuration.
+
+#### Benefits
+
+* Reduces identity propagation issues.
+* Improves RBAC assignment reliability.
+* Ensures identity availability before permission assignment.
+
+---
+
+## Challenges Encountered
+
+### Missing Deployment Context
+
+During implementation, several deployment variables were found to be empty at runtime.
+
+#### Symptoms
+
+* Empty Resource Group names.
+* Empty Key Vault names.
+* Azure CLI deployment failures.
+
+#### Resolution
+
+Introduced centralized context generation and variable export through `context.sh`.
+
+---
+
+### SSH Path Compatibility Issues
+
+When uploading SSH keys to Azure Key Vault from Git Bash, path conversion issues occurred.
+
+#### Symptoms
+
+```text
+[Errno 2] No such file or directory
+```
+
+#### Resolution
+
+Implemented Windows path conversion using:
+
+```bash
+cygpath -w
+```
+
+before Key Vault secret upload operations.
+
+---
+
+### Managed Identity Timing Delays
+
+RBAC assignments occasionally executed before the VM Managed Identity became fully available.
+
+#### Symptoms
+
+* Role assignment failures.
+* Identity lookup inconsistencies.
+
+#### Resolution
+
+Added Managed Identity readiness checks after VM creation before RBAC assignment.
+
+---
+
+## Project Impact
+
+This update significantly improves deployment consistency and operational reliability by introducing centralized context management and strengthening the VM provisioning process.
+
+The framework now provides a stable foundation for future enhancements including:
+
+* Azure Monitor Integration
+* Log Analytics Workspace
+* Alerting and Monitoring
+* GitHub Actions CI/CD
+* Terraform Infrastructure as Code
+* Production-Grade Automation
+
+---
+
+
 # Skills Demonstrated
 
 - Azure Resource Groups

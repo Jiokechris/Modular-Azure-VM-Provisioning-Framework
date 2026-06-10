@@ -1,6 +1,8 @@
 #!/bin/bash
 
-source config-prod.env
+export MSYS_NO_PATHCONV=1
+
+source context.sh
 
 source modules/prerequisites.sh
 source modules/ssh.sh
@@ -58,6 +60,16 @@ main() {
 
     if ! create_key_vault; then
         echo "Key Vault creation failed. Stopping pipeline."
+        exit 1
+    fi
+
+    if ! wait_for_keyvault; then
+        echo "key vault not ready. stoppind pipeline."
+        exit 1
+    fi    
+
+     if ! assign_keyvault_rbac; then
+        echo "Key Vault RBAC assignment failed. Stopping pipeline."
         exit 1
     fi
 
