@@ -1,90 +1,94 @@
 create_vm() {
 
-    echo "Creating VM..."
+    echo "================ VM CREATION START ================"
+
     echo "Location: $LOCATION"
     echo "Size: $VM_SIZE"
 
+    # ==================================================
+    # BUILD PUBLIC KEY PATH
+    # ==================================================
     SSH_PUBLIC_KEY="${SSH_PATH}.pub"
 
     echo "DEBUG SSH_PATH=$SSH_PATH"
     echo "DEBUG SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY"
 
-    # =========================
-    # FIX: normalize path (CRITICAL FOR GIT BASH / WINDOWS)
-    # =========================
-    if command -v realpath >/dev/null 2>&1; then
-        SSH_PUBLIC_KEY=$(realpath "$SSH_PUBLIC_KEY")
-    fi
-
-    echo "DEBUG RESOLVED SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY"
-
-    # =========================
-    # VALIDATE KEY EXISTS
-    # =========================
+    # ==================================================
+    # VALIDATE PUBLIC KEY FILE EXISTS
+    # ==================================================
     if [ ! -f "$SSH_PUBLIC_KEY" ]; then
-        echo "ERROR: Public key not found: $SSH_PUBLIC_KEY"
+        echo "ERROR: SSH public key not found: $SSH_PUBLIC_KEY"
         return 1
     fi
 
-    # =========================
-    # CREATE VM
-    # =========================
-    if az vm create \
+    # ==================================================
+    # LOAD PUBLIC KEY CONTENT
+    # ==================================================
+    PUBLIC_KEY_CONTENT=$(cat "$SSH_PUBLIC_KEY")
+
+    if [ -z "$PUBLIC_KEY_CONTENT" ]; then
+        echo "ERROR: Public key file is empty"
+        return 1
+    fi
+
+    echo "Public key loaded successfully."
+
+    # ==================================================
+    # CREATE VM WITH MANAGED IDENTITY
+    # ==================================================
+    if ! az vm create \
         --resource-group "$RG" \
         --name "$VM_NAME" \
         --location "$LOCATION" \
         --image "$IMAGE" \
         --size "$VM_SIZE" \
         --admin-username "$ADMIN_USER" \
-        --ssh-key-values "$(cat "$SSH_PUBLIC_KEY")" \
+        --ssh-key-values "$PUBLIC_KEY_CONTENT" \
         --custom-data "$CLOUD_INIT_FILE" \
         --assign-identity \
-        --output none; then
+        --output none
+    then
 
-        echo "VM Created Successfully!"
-    else
-        echo "VM creation failed"
+        echo "ERROR: VM creation failed"
         return 1
+
     fi
 
-    # =========================
-    # WAIT FOR IDENTITY (IMPORTANT FIX)
-    # =========================
-    echo "Fetching VM identity..."
+    echo "VM Created Successfully"
 
-    VM_PRINCIPAL_ID=""
+    # ==================================================
+    # WAIT FOR MANAGED IDENTITY TO APPEAR
+    # ==================================================
+    echo "Waiting for VM identity..."
 
     for i in {1..20}; do
-        VM_PRINCIPAL_ID=$(az vm show \
-            -g "$RG" \
-            -n "$VM_NAME" \
-            --query identity.principalId -o tsv 2>/dev/null)
 
-        if [ -n "$VM_PRINCIPAL_ID" ]; then
+        VM_PRINCIPAL_ID=$(az vm show \
+            --resource-group "$RG" \
+            --name "$VM_NAME" \
+            --query identity.principalId \
+            -o tsv 2>/dev/null)
+
+        if [ -n "$VM_PRINCIPAL_ID" ] && [ "$VM_PRINCIPAL_ID" != "null" ]; then
             break
         fi
 
-        echo "Waiting for VM identity... ($i/20)"
+        echo "Waiting for identity... ($i/20)"
         sleep 5
+
     done
 
-    if [ -z "$VM_PRINCIPAL_ID" ]; then
-        echo "WARNING: VM identity not found yet (may still be provisioning)"
+    if [ -z "$VM_PRINCIPAL_ID" ] || [ "$VM_PRINCIPAL_ID" = "null" ]; then
+        echo "WARNING: VM identity not ready yet"
         return 0
     fi
 
     echo "VM Identity: $VM_PRINCIPAL_ID"
 
-    # =========================
-    # RBAC ASSIGNMENT (SAFE)
-    # =========================
-    echo "Assigning Contributor role to VM identity..."
+    # ==================================================
+    # EXPORT FOR RBAC MODULE
+    # ==================================================
+    export VM_PRINCIPAL_ID
 
-    az role assignment create \
-        --assignee "$VM_PRINCIPAL_ID" \
-        --role "Contributor" \
-        --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG" \
-        --output none
-
-    echo "VM RBAC assignment completed."
+    echo "================ VM CREATION END ================"
 }
