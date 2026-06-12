@@ -34,11 +34,27 @@ create_vm() {
     echo "Public key loaded successfully."
 
     # ==================================================
+    # VM NETWORK DEBUG
+    # ==================================================
+    echo "========== VM NETWORK DEBUG =========="
+    echo "RG=$RG"
+    echo "VM_NAME=$VM_NAME"
+echo "NIC_NAME=$NIC_NAME"
+
+    az network nic show \
+    --resource-group "$RG" \
+    --name "$NIC_NAME" \
+    --query id \
+    -o tsv
+
+    echo "======================================"
+    # ==================================================
     # CREATE VM WITH MANAGED IDENTITY
     # ==================================================
     if ! az vm create \
         --resource-group "$RG" \
         --name "$VM_NAME" \
+        --nics "$NIC_NAME" \
         --location "$LOCATION" \
         --image "$IMAGE" \
         --size "$VM_SIZE" \
@@ -47,7 +63,7 @@ create_vm() {
         --custom-data "$CLOUD_INIT_FILE" \
         --assign-identity \
         --output none
-    then
+        then
 
         echo "ERROR: VM creation failed"
         return 1
