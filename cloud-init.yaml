@@ -6,14 +6,12 @@ package_upgrade: true
 packages:
   - nginx
   - curl
-  - azure-cli
 
 write_files:
   - path: /var/www/html/index.html
     content: |
       <!DOCTYPE html>
       <html lang="en">
-
       <head>
         <style>
           body {
@@ -90,23 +88,6 @@ write_files:
       </html>
 
 runcmd:
-  # --------------------------
-  # Enable nginx
-  # --------------------------
   - systemctl enable nginx
   - systemctl restart nginx
-
-  # --------------------------
-  # AZURE IDENTITY LAYER (NEW)
-  # --------------------------
-  - az login --identity
-
-  # --------------------------
-  # FETCH KEY VAULT SECRET (NEW)
-  # --------------------------
-  - SECRET=$(az keyvault secret show \
-      --vault-name jiokekv-$RUN_ID-prod \
-      --name vm-admin-password \
-      --query value -o tsv)
-
-  - echo "Secret retrieved successfully" > /tmp/vault_status.txt
+  - rm -f /var/www/html/index.nginx-debian.html
